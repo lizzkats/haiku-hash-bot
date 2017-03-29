@@ -1,14 +1,18 @@
 const twit = require('twit')
 const config = require('./config')
+const db = require('./database.js')
+const faker = require('faker')
 
 const Twitter = new twit(config)
 
+const fakerData = faker.company.catchPhrase().split(/\s+/)[0]
+console.log(fakerData)
 
-  const params = {
-    q: '#haiku',
-    result_type: 'mixed',
-    lang: 'en'
-  }
+const params = {
+  q: '#' + fakerData,
+  result_type: 'recent',
+  lang: 'en'
+}
 
 
 Twitter.get('search/tweets', params, function(err, data, response) {
@@ -17,12 +21,13 @@ Twitter.get('search/tweets', params, function(err, data, response) {
     let isolateWords = data.statuses[i].text.split(/\s+/)
     isolateWords = isolateWords
       .filter(word => word !== params.q)
+      .filter(word => word !== 'RT')
       .filter(word => word.match(/^\w+$/i))
       .filter(word => !word.match(/^\d+$/i))
     words = words.concat(isolateWords)
   }
   let haikuWords = []
-  while (haikuWords.length < 17) {
+  while (haikuWords.length < 16) {
     haikuWords.push(randomWord(words))
   }
   const finalForm =
@@ -43,13 +48,12 @@ Twitter.get('search/tweets', params, function(err, data, response) {
     haikuWords[14]+' '+
     haikuWords[15]+' ';
 
+    db.addTweet(data.text)
 
-      Twitter.post('statuses/update', { status: params.q + ' ' + finalForm }, function(err, data, response) {
-      console.log(data)
+    Twitter.post('statuses/update', { status: params.q + '\n' + finalForm }, function(err, data, response) {
+    console.log(data)
     })
-
-})
-
+  })
 
 const randomWord = words =>
   words[Math.floor(Math.random()*words.length)];
